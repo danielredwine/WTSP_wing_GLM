@@ -35,11 +35,13 @@ library(grid)
 #knitr::opts_chunk$set(fig.width = 5, fig.asp = 1/3) #force figures to be a certain size and aspect ratio
 #opts_chunk$set(echo=FALSE)   #can force hide all code in the output; disables 'code folding'
 ```
-# Predicting Sex by Wing Chord Length
+# Sex and Wing Chord Length
 
 Previously the significant difference in wing chord length between males and females has been demonstrated. A GLM with Binomial distribution will be used to demonstrate if wing chord length can be used to predict sex. First we will visualize the raw data. The factors male and female have been transformed to values of 1 and 0 respectively. 
 
+<center>
 <iframe src="https://macaulaylibrary.org/asset/155039781/embed" height="515" width="640" frameborder="0" allowfullscreen></iframe>
+</center>
 
 ```{r Load and clean dataset, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -67,18 +69,23 @@ wing_sex_clean <- wtsp_data %>%
 
 # Modelling Sex by Wing Chord Length
 
+First we will visualize the data using geom_smooth with glm method.
+
 ```{r Male probability vs wing chord graph, warning=FALSE, echo=FALSE, message=FALSE, fig.show = "hold", out.width = "85%", fig.align = "center", fig.cap= "Figure 1. Probability of a White-throated Sparrow being male based on wing chord length. Points at 1 and 0 represent male and female wing chord measurements respectively while the line represents probability of a given measurement belonging to a male bird"}
 
 wing_sex_prob <- ggplot(wing_sex_clean, aes(Wing, PCRsex)) +
-  geom_count(show.legend = FALSE) +
-  geom_smooth(method="glm", method.args=list(family="binomial"(link="logit"))) +
+  geom_count(show.legend = FALSE) + # Geom count changes size of points to count
+  geom_smooth(method="glm", method.args=list(family="binomial"(link="logit")), color = "slateblue", fill = "lightskyblue2") + # Geom smooth can use the model to create curve and CI
   ylab ("Male Probability") +
-  xlab ("Wing Chord Length (mm)") 
+  xlab ("Wing Chord Length (mm)") +
+  theme_bw()
 # Create a graph with male/female (1/0) on y and wing chord on x 
 
 wing_sex_prob #Call object 
 
 ```
+Next we will create the model, a GLM with binomial distribution with a predictor of wing chord length for the response of sex. 
+
 ```{r wing_chord_glm, echo=FALSE, message=FALSE, warning=FALSE}
 
 model_sex_wing <- glm(PCRsex ~ Wing, data=wing_sex_clean, binomial(link = 'logit'))
@@ -88,35 +95,35 @@ model_sex_wing
 
 
 ```
-Here are the results of the GLM. Note both the deviance and the AIC.
-```{r sex by wing model assumptions, echo=FALSE, warning=FALSE, message=FALSE}
+We will then check for overdispertion using library arm. 
+```{r sex by wing model assumptions, echo=FALSE, warning=FALSE, message=FALSE, fig.show = "hold", out.width = "85%", fig.align = "center", fig.cap= "Figure 2. Checking overdispersion of data. Note that most points fall outside the 95% CI"}
 
 library(arm)
-x <- predict(model_sex_wing)
+x <- predict(model_sex_wing) #set x and y
 y <- resid(model_sex_wing)
 wing_sex_assumption_plot <- binnedplot(x, y) # Create the plot to check confidence intervals
 
 wing_sex_assumption_plot
 ```
-Results of the Residual bin plot. Note that many of the points lie outside the 95% confidence intervals. 
+# Interpreting the Model
 
-```{r wing chord sex and morph, echo=FALSE, message=FALSE, warning=FALSE}
+To interpret results we will use coef and confint.
+```{r wtsp sex wing model coefficients, message=FALSE, warning=FALSE, echo=FALSE}
 
-model_sex_wing_morph <- glm(PCRsex ~ Wing/PCRMorph, data=wing_sex_clean, binomial(link = 'logit'))
-# Fit model, sex as function of wing length, binomial with logit link
-
-model_sex_wing_morph
-
+coef(model_sex_wing)
 
 ```
+The coefficient for wing is 1.927. Using the divide by four method each 1mm increase in wing chord length leads to 48.2% increase in probability that a bird is a male.
 
+```{r wtsp sex wing model CI, message=FALSE, warning=FALSE, echo=FALSE}
 
-```{r sex by wing morph model assumptions, echo=FALSE, warning=FALSE, message=FALSE}
-
-library(arm)
-x <- predict(model_sex_wing_morph)
-y <- resid(model_sex_wing_morph)
-wing_sex_morph_assumption_plot <- binnedplot(x, y) # Create the plot to check confidence intervals
-
-wing_sex_morph_assumption_plot
+confint(model_sex_wing)
 ```
+
+Here we can see the confidence intervals. 
+
+```{r sex wing model summary, message=FALSE, warning=FALSE, echo=FALSE}
+summary(model_sex_wing)
+```
+
+Summary of the model predicting sex by wing chord length.
